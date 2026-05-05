@@ -6,12 +6,22 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 
 jobs = pd.read_csv("jobs.csv")
 
-job_embeddings = model.encode(jobs['description'].tolist())
+# 🔍 FIX: combine columns safely
+if 'description' in jobs.columns:
+    job_text = jobs['description'].astype(str)
+elif 'skills' in jobs.columns and 'title' in jobs.columns:
+    job_text = jobs['title'].astype(str) + " " + jobs['skills'].astype(str)
+elif 'job_post' in jobs.columns:
+    job_text = jobs['job_post'].astype(str)
+else:
+    raise ValueError("No valid job text column found in CSV")
+
+job_embeddings = model.encode(job_text.tolist())
 
 def match_jobs(resume_text):
-    resume_vec = model.encode([resume_text])[0]
+    resume_vector = model.encode([resume_text])[0]
 
-    scores = cosine_similarity([resume_vec], job_embeddings)[0]
+    scores = cosine_similarity([resume_vector], job_embeddings)[0]
 
     jobs['score'] = scores
 
