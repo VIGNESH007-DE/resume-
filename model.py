@@ -1,35 +1,95 @@
 import pandas as pd
-from sentence_transformers import SentenceTransformer
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Load model
-model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Load dataset
 jobs = pd.read_csv("jobs.csv")
 
-# -----------------------------
-# CREATE JOB TEXT FROM YOUR COLUMNS
-# -----------------------------
-job_text = (
-    jobs['Company'].astype(str) + " " +
-    jobs['Post'].astype(str) + " " +
-    jobs['Location'].astype(str) + " " +
-    jobs['Experience'].astype(str) + " " +
-    jobs['Stipend'].astype(str)
-)
 
-# Create embeddings
-job_embeddings = model.encode(job_text.tolist())
+# Skill database
+skills_list = [
 
-# -----------------------------
-# MATCH FUNCTION
-# -----------------------------
+    "python",
+    "machine learning",
+    "deep learning",
+    "sql",
+    "power bi",
+    "tableau",
+    "tensorflow",
+    "pytorch",
+    "nlp",
+    "computer vision",
+    "react",
+    "html",
+    "css",
+    "javascript",
+    "django",
+    "flask",
+    "aws",
+    "docker",
+    "kubernetes",
+    "linux",
+    "ethical hacking",
+    "network security",
+]
+
+
+# TF-IDF
+vectorizer = TfidfVectorizer()
+
+job_vectors = vectorizer.fit_transform(jobs['skills'])
+
+
+# Extract skills
+def extract_skills(text):
+
+    found_skills = []
+
+    for skill in skills_list:
+
+        if skill in text:
+            found_skills.append(skill)
+
+    return found_skills
+
+
+# Match jobs
 def match_jobs(resume_text):
-    resume_vector = model.encode([resume_text])[0]
 
-    scores = cosine_similarity([resume_vector], job_embeddings)[0]
+    resume_vector = vectorizer.transform([resume_text])
 
-    jobs['score'] = scores
+    similarity = cosine_similarity(
+        resume_vector,
+        job_vectors
+    )
 
-    return jobs.sort_values(by='score', ascending=False)
+    jobs['match_score'] = similarity[0] * 100
+
+    results = jobs.sort_values(
+        by='match_score',
+        ascending=False
+    )
+
+    return results
+
+
+# Missing skills
+def missing_skills(
+    resume_text,
+    job_skills
+):
+
+    resume_words = set(
+        resume_text.split()
+    )
+
+    job_words = set(
+        job_skills.split()
+    )
+
+    missing = job_words - resume_words
+
+    return list(missing)
