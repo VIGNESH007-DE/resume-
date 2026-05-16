@@ -1,19 +1,107 @@
 import streamlit as st
-from model import match_jobs
+
 from utils import extract_text
 
-st.title("🥈 Smart Job Matching AI")
+from model import (
+    match_jobs,
+    extract_skills,
+    missing_skills
+)
 
-uploaded_file = st.file_uploader("Upload Resume (PDF)")
+# Page settings
+st.set_page_config(
+    page_title="AI Resume Screening",
+    page_icon="📄",
+    layout="centered"
+)
 
-if uploaded_file:
-    resume_text = extract_text(uploaded_file)
+# Title
+st.title(
+    "📄 AI Resume Screening & Job Matching System"
+)
 
-    results = match_jobs(resume_text)
+st.write(
+    "Upload your resume PDF and get AI-powered job recommendations."
+)
 
-    st.subheader("Top Job Matches")
+# File upload
+uploaded_file = st.file_uploader(
+    "Upload Resume PDF",
+    type=["pdf"]
+)
 
-    for i, row in results.head(5).iterrows():
-        st.write("###", row['title'])
-        st.write("Score:", round(row['score'], 2))
+if uploaded_file is not None:
+
+    st.success(
+        "Resume uploaded successfully!"
+    )
+
+    # Extract text
+    resume_text = extract_text(
+        uploaded_file
+    )
+
+    # Extract skills
+    skills = extract_skills(
+        resume_text
+    )
+
+    st.subheader(
+        "🧠 Detected Skills"
+    )
+
+    if len(skills) > 0:
+
+        for skill in skills:
+            st.write(f"✅ {skill}")
+
+    else:
+        st.warning(
+            "No skills detected."
+        )
+
+    # Match jobs
+    results = match_jobs(
+        resume_text
+    )
+
+    st.subheader(
+        "🎯 Top Job Matches"
+    )
+
+    # Show top matches
+    for index, row in results.head(5).iterrows():
+
+        st.write(
+            f"## {row['title']}"
+        )
+
+        st.progress(
+            int(row['match_score'])
+        )
+
+        st.write(
+            f"Match Score: {row['match_score']:.2f}%"
+        )
+
+        # Missing skills
+        missing = missing_skills(
+            resume_text,
+            row['skills']
+        )
+
+        st.write(
+            "### Missing Skills"
+        )
+
+        if len(missing) > 0:
+
+            for m in missing:
+                st.write(f"❌ {m}")
+
+        else:
+            st.write(
+                "No missing skills."
+            )
+
         st.write("---")
